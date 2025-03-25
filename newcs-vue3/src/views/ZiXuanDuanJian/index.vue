@@ -54,7 +54,12 @@
                     style="display: flex; flex-direction: column; gap: 10px;">
                       <el-input class="input_smiles" v-model="oneAtom" placeholder="输入期望的单个原子序号"  
                     clearable style="width: 52%;"></el-input>
+                     <el-input class="input_smiles" v-model="beam_num0" placeholder="束宽"  
+                    clearable style="width: 20%;"></el-input>
                     <el-button type="primary" class="submit-button" @click="HeChengZi_oneAtmo">合成子预览</el-button>
+
+              
+
                     </el-tab-pane>
 
                     <el-tab-pane label="单键" name="danjian" 
@@ -63,6 +68,8 @@
                     clearable style="width: 52%;"></el-input>
                       <el-input class="input_smiles" v-model="oneBond2" placeholder="输入期望的第二个原子"  
                     clearable style="width: 52%;"></el-input>
+                    <el-input class="input_smiles" v-model="beam_num1" placeholder="束宽"  
+                    clearable style="width: 20%;"></el-input>
                     <el-button type="primary" class="submit-button" @click="HeChengZi_oneBond">合成子预览</el-button>
                     </el-tab-pane>
 
@@ -76,6 +83,10 @@
                       clearable style="width: 52%;"></el-input>
                       <el-input class="input_smiles" v-model="second_edit2" placeholder="输入期望的第二组断键的第二个原子"  
                       clearable style="width: 52%;"></el-input>
+                      <el-input class="input_smiles" v-model="beam_num2" placeholder="束宽1"  
+                    clearable style="width: 20%;"></el-input>
+                      <el-input class="input_smiles" v-model="beam_num22" placeholder="束宽2"  
+                    clearable style="width: 20%;"></el-input>
                       <el-button type="primary" class="submit-button" @click="HeChengZi">合成子预览</el-button>
                     </el-tab-pane>
 
@@ -197,6 +208,7 @@ const moleculeInput = ref('');
 const target_image_f = ref('')
 
 const result_img = ref('')
+
 const recentResults0 = ref([]); 
 const recentResults1 = ref([]); 
 const recentResults2 = ref([]); 
@@ -228,6 +240,10 @@ const heCzi_img_danyuanzi = ref('')
 const heCzi_img_danjian = ref('')
 const heCzi_img = ref('')
 
+const beam_num0 = ref()
+const beam_num1 = ref()
+const beam_num2 = ref()
+const beam_num22 = ref()
 
 
 
@@ -356,6 +372,7 @@ async function edit_context() {
             // 发送的数据
             smile: String(moleculeInput.value),
             edit_1:String(oneAtom.value)+':0',
+            beam_num:parseInt(beam_num0.value, 10)
             }
             );
 
@@ -371,6 +388,7 @@ async function edit_context() {
                     // 发送的数据
                     smile: String(moleculeInput.value),
                     edit_1:String(oneBond1.value)+':'+String(oneBond2.value),
+                    beam_num:parseInt(beam_num1.value, 10)
                     }
                   );
                   
@@ -389,6 +407,8 @@ async function edit_context() {
                       smile: String(moleculeInput.value),
                       edit_1:String(first_edit1.value)+':'+String(first_edit2.value),
                       edit_2:String(second_edit1.value)+':'+String(second_edit2.value),
+                      beam_num01:parseInt(beam_num2.value, 10),
+                      beam_num02:parseInt(beam_num22.value, 10),
                       }
                     );
                     

@@ -19,7 +19,7 @@ from fastapi.middleware.cors import CORSMiddleware # 跨域问题
 import uvicorn  # 直接启动APP
 import base64  # 编码和解码 Base64
 import io
-from pydantic import BaseModel
+from pydantic import BaseModel,Field
 from fastapi.responses import JSONResponse
 
 app = FastAPI()
@@ -514,10 +514,14 @@ class Edit_context(BaseModel):
     smile: str
     edit_1:str
     edit_2:str
+    beam_num01:int
+    beam_num02:int
 
 class Edit_context002(BaseModel):
     smile: str
     edit_1:str
+    beam_num:int = Field(default=5)
+
 
 # 产物原子映射
 @app.post('/user/1/TargetImage_canonicalize/')
@@ -537,7 +541,8 @@ async def target_smile(smile_request: SmileRequest):
 # 断键预测 -- 单键/单原子
 @app.post('/user/1/edits_context002/')
 async def edit_context002(edit_context: Edit_context002):
-    width_nub, beam_model = load_models(10)
+    beam_num = edit_context.beam_num
+    width_nub, beam_model = load_models(beam_num)
     smile = [edit_context.smile]
     edit_1 = edit_context.edit_1
     a1, a2 = edit_1.split(":")
@@ -559,7 +564,9 @@ async def edit_context002(edit_context: Edit_context002):
 # 断键预测 -- 双键
 @app.post('/user/1/edits_context/')
 async def edit_context(edit_context: Edit_context):
-    width_nub, beam_model = load_models(5)
+    beam_num01 = edit_context.beam_num01
+    beam_num02 = edit_context.beam_num02
+    width_nub, beam_model = load_models(beam_num01)
     smile = [edit_context.smile]
     edit_1 = edit_context.edit_1
     edit_2 = edit_context.edit_2
@@ -568,7 +575,7 @@ async def edit_context(edit_context: Edit_context):
     a11, a22 = edit_2.split(":")
     a11, a22 = int(a11), int(a22)
     print(smile, a1, a2,a11,a22)
-    scores_list, result_b64 = broken_tow_bonds(smile, a1, a2, a11, a22,width_nub=width_nub,beam_model=beam_model)
+    scores_list, result_b64 = broken_tow_bonds(smile, a1, a2, a11, a22,width_nub=width_nub,beam_model=beam_model,second_num = beam_num02)
     response_data =  {
         'result_b64': result_b64,
         'scores_list':scores_list,
