@@ -1,0 +1,130 @@
+/* 为整个布局设置一些基础样式 */
+.common-layout {
+  font-family: Arial, sans-serif;
+  min-height: 100vh;
+}
+
+/* el-header: 顶部 header 样式 */
+.el-header {
+  background-color: #409EFF; /* 使用 Element Plus 默认主色 */
+  color: white;
+  font-size: 40px;
+  text-align: left;
+}
+
+/* el-aside: 侧边栏样式 */
+.el-aside {
+  background-color: #5a5959; /* 浅灰背景 */
+  padding: 1px;
+  font-size: 32px;
+  color: #333;
+  display: flex;
+  height: 100vh;
+}
+
+/* el-main: 主内容区样式 */
+.el-main {
+  background-color: #fff; /* 白色背景 */
+  padding: 1%;
+  font-size: 28px;
+  color: #444;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+
+.new-project {
+  float: right; /* 让按钮浮动到右侧 */
+  margin-right: 20px; /* 给按钮右侧添加一些空隙 */
+}
+
+.el-menu-vertical-demo {
+  flex-grow: 1; /* 占据剩余高度 */
+  height: 100%; /* 高度占满侧边栏 */
+  padding: 0; /* 移除默认内边距 */
+  border-right: none; /* 取消默认的右边框 */
+}
+
+/* el-menu-item: 修改每一项菜单的高度和字体大小 */
+.el-menu-item {
+  height: 60px; /* 设置菜单项的高度 */
+  line-height: 60px; /* 使文字居中 */
+  font-size: 18px; /* 修改字体大小 */
+  padding-left: 20px; /* 左侧的间距 */
+  color: #333; /* 文字颜色 */
+}
+
+/* 菜单项图标和文字对齐 */
+.el-menu-item .el-icon {
+  margin-right: 10px; /* 图标与文字之间的距离 */
+}
+
+/* 鼠标悬停时的效果 */
+.el-menu-item:hover {
+  background-color: #e6f7ff; /* 鼠标悬停时背景色 */
+}
+/* .module-box {
+  display: flex;
+  justify-content: space-between; 
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.box {
+  flex: 0 1 32%; 
+  margin: 20px 0px; 
+} */
+
+/* .list-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 2 / 1; 
+  background-color: #f5f5f5;
+  border-radius: 10px;
+  box-shadow: 0 3px 20px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  text-align: center;
+} */
+
+/* .list-box img {
+  width: 30%;
+  height: auto;
+  margin-bottom: 10px;
+} */
+
+/* .list-box p {
+  margin: 0;
+  font-size: 16px;
+  color: #333;
+} */
+
+.function-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.function-btn p {
+  margin-top: 10px;
+  font-size: 36px;
+  font-weight: bold;
+}
+.quick-start {
+  margin: 20px 0;
+  text-align: center;
+}
+.quick-start-btn {
+  background-color: #3b7ddd;
+  color: white;
+  padding: 15px;
+  border-radius: 5px;
+  font-size: 1.2em;
+  cursor: pointer;
+  border: none;
+}
+:root {
+  --el-color-primary:rgb(1,70,138);
+}
