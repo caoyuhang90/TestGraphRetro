@@ -1,3 +1,0 @@
-安装 ：正常安装+tensorbord==2.4.1
-
-wandb = 0.18.7  -->  conda install wandb=0.17.2
