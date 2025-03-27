@@ -174,9 +174,9 @@ beam_model = BeamSearch(model=rm, beam_width=args.beam_width, max_edits=1)  #加
 #     'O=C1[C@@](C#C)(C)CCCC1',
 #     'O[C@@H]1CC[C@@](C2)([C@@H](O)CC3(C)C)[C@H]3CC[C@]21C']
 
-smiles = ['OC1C(C2=CC=C(C=C2)Br)=C(O)N=CN=1']
+# smiles = ['OC1C(C2=CC=C(C=C2)Br)=C(O)N=CN=1']
 # smiles = ('CC[C@H](CN(C(NCC(F)(F)F)=O)C1)[C@H]1C2=CN=C3C=NC4=C(C=CN4)N32')
-# smiles = ['CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O']  # 9 10 14 15
+smiles = ['CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O']  # 9 10 14 15
 # smiles = ['[H][C@]12[C@@]3(C[C@@H](C4[C@](C=CC(C=4)=O)([C@]3([C@H](C[C@@]1([C@]([C@H](C)C2)(C(=O)SCF)OC(CC)=O)C)O)F)C)F)[H]']  # 15 16 30 28
 # smiles = ['O=C(C)C1=CC=C(CN2C=C(C=N2)NC(C2=C(C3C=CC=CC=3)OC(COC)=N2)=O)O1']
 
@@ -204,8 +204,8 @@ for id,smile in enumerate(smiles):
     # fragments_new2 = []
     node_list.append(BeamNode(mol=Chem.Mol(mol)))     #= [BeamNode(mol=Chem.Mol(mol))
     # node_list.append(BeamNode(mol=Chem.Mol(mol)))
-    node_list[0].edit=['3:2:2.0:0.0']
-    edit_2 = '5:6:1.0:0.0'
+    node_list[0].edit=['9:10:2.0:0.0']
+    edit_2 = '14:15:1.0:0.0'
     # node_list[1].edit = edit_2
     # node_list[-1].add_edit
     # print('模型预测的断键：',node_list[0].edit)
@@ -252,6 +252,7 @@ for id,smile in enumerate(smiles):
     frag_1 = []
     frag_2 = []
     frag_FirstToSecond = []  # 保存第二次要拆的合成子的smiles，带编号
+    reac_smi_no_canonicalize_list = []
 
     for beam_idx, node in enumerate(tmp_list1):
         # print('tmp_list1',len(tmp_list1))
@@ -272,7 +273,7 @@ for id,smile in enumerate(smiles):
             print(e, flush=True)
             pred_set = None
 
-
+        reac_smi_no_canonicalize_list.append(reac_smi_no_canonicalize)
         pred_list=list(pred_set)  # 反应集转换为列表，并打印结果
         print('pred_list',pred_list)
         # print('reac_smi_no_canonicalize',reac_smi_no_canonicalize)
@@ -319,6 +320,22 @@ for id,smile in enumerate(smiles):
             rxn1.append(pred_list[0]+'.'+pred_list[1])
         else:
             rxn1.append(pred_list[0])
+
+
+
+
+    highlight_atoms = []
+    highlight_list = []
+    reac_smi_no_canonicalize_list = [Chem.MolFromSmiles(atom) for atom in reac_smi_no_canonicalize_list]
+    for mol in reac_smi_no_canonicalize_list:
+        highlight_atoms = []
+        for atom in mol.GetAtoms():
+            if atom.GetAtomMapNum()  > 999:
+                highlight_atoms.append(atom.GetIdx())
+        highlight_list.append(highlight_atoms)
+
+
+
 
     frag_FirstToSecond_new =[ canonicalize(x) for x in frag_FirstToSecond]  # 存放第一次的目标（需要第二次断的）合成子的预测
 
@@ -396,9 +413,15 @@ for id,smile in enumerate(smiles):
             print(e, flush=True)
             pred_set = None
 
-
-
+        # sml = Chem.MolToSmiles(sml)
+        print('sml',sml)
+        print(beam_idx, "离去基团的标签预测结果", pred_label)
         pred_list=list(pred_set)  # 反应集转换为列表，并打印结果
+
+        # substructure = Chem.MolFromSmarts(pred_list[0])
+        # m.GetSubstructMatches(substructure)
+        #
+
         print('pred_list',pred_list)
         if len(pred_list)>1:
             rxn2.append(pred_list[0]+'.'+pred_list[1])

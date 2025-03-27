@@ -110,7 +110,7 @@ def edits_split(prod_mol,n1,n2=0,n3=-1,n4=0):
     fragment_list = fragments.split('.')
     print('fragment_list',fragment_list)
 
-
+    fragment_list_new = []
     # 双键操作
     for fra in fragment_list:
         fra = Chem.MolFromSmiles(fra)
@@ -129,18 +129,31 @@ def edits_split(prod_mol,n1,n2=0,n3=-1,n4=0):
             str1 = canonicalize(str1)
             print('str1', str1)
 
-            fragment_list = [ canonicalize(x)  for x in fragment_list]
-            fragment_list.remove(str1)
+            # fragment_list_new = [ canonicalize(x)  for x in fragment_list]
+            # fragment_list_new.remove(str1)
 
             fragments_1 = apply_edits_to_mol(fra, core_edits_1)  # 拆分--产物的分子表示+中心编辑
             print('fragments_1:',Chem.MolToSmiles(fragments_1))
             fragments_1 = Chem.MolToSmiles(fragments_1).split('.')
             print(fragments_1)
-            fragment_list = fragment_list + fragments_1
-            print('fragment_list_aaa:',fragment_list)
+            fragment_list_new.extend(fragments_1)
+            # print('fragment_list_aaa:',fragment_list)
+        else:
+            fra = Chem.MolToSmiles(fra)
+            fragment_list_new.append(fra)
 
-    molecules = [Chem.MolFromSmiles(fragment) for fragment in fragment_list]
-    img = Draw.MolsToGridImage(molecules, molsPerRow=1, subImgSize=(500, 500))
+    highlight_atoms_list = []
+    molecules = [Chem.MolFromSmiles(fragment) for fragment in fragment_list_new]
+    for mol in molecules:
+        highlight_atoms = []
+        for atom in mol.GetAtoms():
+            print(atom.GetAtomMapNum())
+            if atom.GetAtomMapNum() in [n1, n2,n3,n4]:  # 目标映射编号
+                highlight_atoms.append(atom.GetIdx())
+        highlight_atoms_list.append(highlight_atoms)
+
+
+    img = Draw.MolsToGridImage(molecules, molsPerRow=2, subImgSize=(800, 500),highlightAtomLists=highlight_atoms_list)
     img.save("aaa_duanjian/chai_r_p_3_2.png")
 
 
@@ -148,14 +161,14 @@ def edits_split(prod_mol,n1,n2=0,n3=-1,n4=0):
 # rxn_smi = ('CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O')
 # rxn_smi = ('O=C(C)C1=CC=C(CN2C=C(C=N2)NC(C2=C(C3C=CC=CC=3)OC(COC)=N2)=O)O1')
 # rxn_smi = '[H][C@]12[C@@]3(C[C@@H](C4[C@](C=CC(C=4)=O)([C@]3([C@H](C[C@@]1([C@]([C@H](C)C2)(C(=O)SCF)OC(CC)=O)C)O)F)C)F)[H]'  # 5 6 15 16
-rxn_smi = 'OC1C(C2=CC=C(C=C2)Br)=C(O)N=CN=1'
+rxn_smi = 'CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O'
 
 
 
 
 
 
-# edits_split(rxn_smi,8,9,)
+# edits_split(rxn_smi,9,10,14,15)
 # new = new_edits_split(5,6,15,16)
 
 print('okduanjian')

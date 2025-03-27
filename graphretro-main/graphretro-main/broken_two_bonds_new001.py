@@ -61,82 +61,16 @@ def canonicalize_prod(p):
     p = Chem.MolToSmiles(pmol)
     return p
 
-def edits_split(pro_smile,a1,a2=0,a11=-1,a22=0,b1=1.0, b2=0,b11=1.0,b22=0):
-
-    prod_mol = canonicalize_prod(pro_smile)
-    prod_mol = get_mol(prod_mol)
-    num1 = a1
-    num2 = a2
-    num3 = b1
-    num4 = b2
-
-    num5 = a11
-    num6 = a22
-    num7 = b11
-    num8 = b22
-
-
-
-
-    core_edits = [f'{num1}:{num2}:{num3}:{num4}']    #  a1:a2:b1:b2  --->   （产物原子编号）-起始：终止：原来的键类型：后来的键类型
-    core_edits_1 = [f'{num5}:{num6}:{num7}:{num8}']
-
-
-
-
-    fragments = apply_edits_to_mol(prod_mol, core_edits)  # 拆分--产物的分子表示+中心编辑
-    fragments = Chem.MolToSmiles(fragments)
-    fragment_list = []
-    fragment_list = fragments.split('.')
-    print('fragment_list',fragment_list)
-
-    fragment_list_new = []
-    # 双键操作
-    for fra in fragment_list:
-        fra = Chem.MolFromSmiles(fra)
-        franum_list = []
-        print('ok')
-        for atom in fra.GetAtoms():
-            atomnum = atom.GetAtomMapNum()
-            franum_list.append(atomnum)
-        if num5 in franum_list :  # 判断是在哪个子图里面
-            # fragment_list = fragment_list.remove(Chem.MolToSmiles(fra))
-
-            # 删除 符合的第一次拆分的子图
-            str1_mol = Chem.MolToSmiles(fra)
-            str1 = str(str1_mol)
-
-            str1 = canonicalize(str1)
-            print('str1', str1)
-
-
-
-            fragments_1 = apply_edits_to_mol(fra, core_edits_1)  # 拆分--产物的分子表示+中心编辑
-            print('fragments_1:',Chem.MolToSmiles(fragments_1))
-            fragments_1 = Chem.MolToSmiles(fragments_1).split('.')
-            print(fragments_1)
-            fragment_list_new.extend(fragments_1)
-        else:
-            fra = Chem.MolToSmiles(fra)
-            fragment_list_new.append(fra)
-    highlight_atoms = []
-    highlight_atoms_list = []
-    molecules = [Chem.MolFromSmiles(fragment) for fragment in fragment_list_new]
-    for mol in molecules:
-        highlight_atoms = []
-        for atom in mol.GetAtoms():
-            if atom.GetAtomMapNum() in [a1, a2,a11,a22]:  # 目标映射编号
-                highlight_atoms.append(atom.GetIdx())
-        highlight_atoms_list.append(highlight_atoms)
-    img_heCzi = Draw.MolsToGridImage(molecules, molsPerRow=2, subImgSize=(1200, 800),highlightAtomLists=highlight_atoms_list)
-    additional_img_bytes = io.BytesIO()
-    img_heCzi.save(additional_img_bytes, format='PNG')
-    additional_image_b64 = base64.b64encode(additional_img_bytes.getvalue()).decode('utf-8')
-
-    return additional_image_b64
 
 def map_value_to_category(value,width_nub):
     return (value//(width_nub**2))
+
+
+def check_nodes_complete(node_list):
+    for node in node_list:
+        if not node.node_complete:
+            return False
+    return True
 
 
 # 【编辑】模型
@@ -227,21 +161,7 @@ def load_models(num):
 
 
 
-
-# smiles = ['CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O']
-# smiles = ['COC1=CC=C(N2N=C(C3=C2C(N(C4=CC=C(N5CCCCC5=O)C=C4)CC3)=O)C(N)=O)C=C1']
-smiles = [
-    'C[C@@]12[C@@](C(SCF)=O)([C@@H](C[C@]1([C@@]3(C[C@@H](C4=CC(C=C[C@@]4([C@]3([C@H](C2)O)F)C)=O)F)[H])[H])C)OC(CC)=O']
-
-
-def check_nodes_complete(node_list):
-    for node in node_list:
-        if not node.node_complete:
-            return False
-    return True
-
-
-def broken_tow_bonds(smiles,a1,a2,a11,a22,width_nub,beam_model,b1=1.0, b2=0,b11=1.0,b22=0,first_num=5,second_num=8):                  # 单：15 16 28  30
+def two_breaken_new(smiles,a1,a2,a11,a22,width_nub,beam_model,b1=1.0, b2=0,b11=1.0,b22=0,first_num=5,second_num=8):
     print('执行：broken_tow_bonds')
     rxn = []
     rxn1 = []
@@ -261,6 +181,8 @@ def broken_tow_bonds(smiles,a1,a2,a11,a22,width_nub,beam_model,b1=1.0, b2=0,b11=
         new_node, fragments_new2 = beam_model._create_lg_node(p, node_list[0],
                                                               rxn_class=None)  # 增加了两个特征向量（一个关于合成子frag_vecs，一个关于产物prod_vecs），合成子个数
         new_node_list.append(new_node)
+
+        num_fragments = new_node_list[0].num_fragments  # 合成子个数
 
         # 第二次拆分的 【键】
         a1, a2, b1, b2 = edit_2.split(':')
@@ -345,7 +267,18 @@ def broken_tow_bonds(smiles,a1,a2,a11,a22,width_nub,beam_model,b1=1.0, b2=0,b11=
             else:
                 rxn1.append(pred_list[0])
 
+        # frag_FirstToSecond 存放对应前体
         frag_FirstToSecond_new = [canonicalize(x) for x in frag_FirstToSecond]
+
+        if new_node_list[0].num_fragments == 1:
+            rxn1 = [None]
+        elif new_node_list[0].num_fragments == 2:
+            for id, x in enumerate(frag_FirstToSecond):
+                x = canonicalize(x)
+                y = rxn1[id].split('.')
+                y.remove(x)
+                rxn1[id] = y[0]
+
 
         # 束搜索匹配离去基团，关键参数 tmp_list2    开始有5个，然后扩展为25个，再扩展为125个
         while not check_nodes_complete(tmp_list2) and step <= 6:
@@ -356,9 +289,11 @@ def broken_tow_bonds(smiles,a1,a2,a11,a22,width_nub,beam_model,b1=1.0, b2=0,b11=
             tmp_list2 = tmp_list
             step += 1
 
-        tmp_list2 = beam_model.keep_topk_nodes_new(tmp_list2,second_num)  # 选最靠谱的 second_num 个   现在的tmp_list2元组表示
+        tmp_list2 = beam_model.keep_topk_nodes_new(tmp_list2, second_num)  # 选最靠谱的 second_num 个   现在的tmp_list2元组表示
 
-        tmp_list2_scores = [(map_value_to_category(node[0], width_nub), node[1].prob) for node in tmp_list2]
+        tmp_list2 = [[map_value_to_category(node[0], width_nub), node[1]] for node in tmp_list2]
+
+        tmp_list2_scores = [(node[0], node[1].prob) for node in tmp_list2]
         # 得分处理  第一次预测得分与第二次得分的综合得分
         CompositeScores = []  # 存放分数
         scores_list = []
@@ -372,286 +307,172 @@ def broken_tow_bonds(smiles,a1,a2,a11,a22,width_nub,beam_model,b1=1.0, b2=0,b11=
             node[1].prob = composite_score
         # 再排序
         sorted_list_2 = sorted(tmp_list2, key=lambda x: x[1].prob, reverse=False)
-        tmp_list2 = sorted_list_2
-        print('CompositeScores:',CompositeScores)
-        print('scores_list:',scores_list)
-        for x in sorted_list_2:
-            scores_list_true.append(x[1].prob)
 
-        print('scores_list_true:',scores_list_true)
-
-
-        # tmp_list2 = tmp_list2[:len(rxn1)]
-        print('\nstep\n')
-
-        # 把rxn1里面要分解的合成子去掉
-        if new_node_list[0].num_fragments == 1:
-            rxn1 = []
-        elif new_node_list[0].num_fragments == 2:
-            for id, x in enumerate(frag_FirstToSecond):
-                x = canonicalize(x)
-                y = rxn1[id].split('.')
-                y.remove(x)
-                rxn1[id] = y[0]
-
-        for beam_idx, node in enumerate(tmp_list2):
-            pred_edit = node[1].edit
-            pred_label = node[1].lg_groups
-
-            choose_num = map_value_to_category(node[0],width_nub)
-            print('choose_num', choose_num)  # 哪一个 【目标合成子】
-
-            sml = frag_FirstToSecond[choose_num]
-
-            print('pred_edit', pred_edit)
-
-            if isinstance(pred_edit, list):  # 检查pre_edit是否为一个列表，如果是，执行下面语句
-                pred_edit = pred_edit[0]
-
-            print(beam_idx, "离去基团的标签预测结果", pred_label)
-
-            try:
-                pred_set, _ = generate_reac_set(sml, pred_edit, pred_label, verbose=False)  # 重要  生成预测的反应集
-            except BaseException as e:
-                print(e, flush=True)
-                pred_set = None
-
-            pred_list = list(pred_set)  # 反应集转换为列表，并打印结果
-            print('pred_list', pred_list)
-            if len(pred_list) > 1:
-                rxn2.append(pred_list[0] + '.' + pred_list[1])
+        for id, node in enumerate(sorted_list_2):
+            node.append(frag_FirstToSecond[node[0]])
+            # node.append(rxn1[node[0]])
+            if  rxn1[0] is not None:
+                node.append(rxn1[node[0]])
             else:
-                rxn2.append(pred_list[0])
-
-            if new_node_list[0].num_fragments == 1:
-                rxn.append(rxn2[beam_idx])
-            elif new_node_list[0].num_fragments == 2:
-                rxn.append(rxn1[choose_num] + '.' + rxn2[beam_idx])
-
-    print('rxn', rxn)
-    b64 = []
-    img_list = []
-    mol_rxn = [Chem.MolFromSmiles(sml) for sml in rxn]
-
-    for x in mol_rxn[1:]:
-        img = Draw.MolsToGridImage([x], molsPerRow=1, subImgSize=(800, 600))
-        img_list.append(img)
-    for img in img_list:
-        additional_img_bytes = io.BytesIO()
-        img.save(additional_img_bytes, format='PNG')
-        additional_image_b64 = base64.b64encode(additional_img_bytes.getvalue()).decode('utf-8')
-        b64.append(additional_image_b64)
-
-    return scores_list_true,b64
-
-# broken_tow_bonds(smiles,15,16,30,28)
+                node.append(None)
 
 
 
-def broken_one(sml,a1,a2,width_nub, beam_model,b1=1.0,b2= 0):
+    return sorted_list_2,num_fragments
+
+# 分子式子，键1，键2，第一次束宽，第二次束宽
+def two_breaken_new001(sml,edit_1,edit_2,beam_num01=5,beam_num02=5):
+
+    beam_num01 = beam_num01
+    width_nub, beam_model = load_models(beam_num01)  # 模型加载
+
+    beam_num02 = beam_num02
+    smile = [sml]
+    edit_1 = edit_1
+    edit_2 = edit_2
+
+    a1, a2 = edit_1.split(":")
+    a1, a2 = int(a1), int(a2)
+    a11, a22 = edit_2.split(":")
+    a11, a22 = int(a11), int(a22)
+    list_001 = []
+    list_002 = []
+
     rxn = []
     rxn1 = []
     rxn2 = []
 
+    list_001, num_fragments = two_breaken_new(smile, a1, a2, a11, a22, width_nub=width_nub, beam_model=beam_model,
+                                              second_num=beam_num02)
+    list_002, _ = two_breaken_new(smile, a11, a22, a1, a2, width_nub=width_nub, beam_model=beam_model,
+                                  second_num=beam_num02)
 
+    list_000 = list_001 + list_002
 
-    for id,smile in enumerate(sml):
-        p = canonicalize_prod(smile)  # 清理 + 重新编码
-        rxn.append(p)  # 将产物加入到列表中
-        mol = Chem.MolFromSmiles(p)
-        # node_list=beam_model.run_edit_step(p)  # 预测反应中心
-        node_list = []
-        node_list.append(BeamNode(mol=Chem.Mol(mol)))  # [BeamNode(mol=Chem.Mol(mol))
-        node_list[0].edit = [f'{a1}:{a2}:{b1}:{b2}']
+    sorted_list_2 = sorted(list_000, key=lambda x: x[1].prob, reverse=False)[:beam_num02]
 
-        # print('模型预测的断键：',node_list[0].edit)
+    for beam_idx, node in enumerate(sorted_list_2):  # tmp_list2 是元组
+        pred_edit = node[1].edit
+        pred_label = node[1].lg_groups
 
-        # highlight_atoms = []
-        # for atom in mol.GetAtoms():
-        #     if atom.GetAtomMapNum() in [a1, a2]:  # 目标映射编号
-        #         highlight_atoms.append(atom.GetIdx())
-        # print('highlight_atoms:',highlight_atoms)
-        #
-        # highlight_atoms1 = []
-        # for atom in mol.GetAtoms():
-        #     if atom.GetAtomMapNum() in [a1, a2]:  # 目标映射编号
-        #         highlight_atoms1.append(atom.GetIdx())
-        # print('highlight_atoms:',highlight_atoms1)
+        sml = node[2]
 
-        new_node_list = []
-        step = 0
-        new_node, fragments_new2 = beam_model._create_lg_node(p, node_list[0],
-                                                              rxn_class=None)  # 增加了两个特征向量（一个关于合成子frag_vecs，一个关于产物prod_vecs），合成子个数
-        new_node_list.append(new_node)
+        if isinstance(pred_edit, list):  # 检查pre_edit是否为一个列表，如果是，执行下面语句
+            pred_edit = pred_edit[0]
 
-        while not check_nodes_complete(new_node_list) and step <= 6:
-            tmp_list = []
-            assert all([node.frag_vecs is not None for node in new_node_list])
-            for node in new_node_list:
-                tmp_list.extend(beam_model.add_lg_to_node(node))  # 预测离去基团，并添加至node中
-            new_node_list = tmp_list
-            step += 1
+        print(beam_idx, "离去基团的标签预测结果", pred_label)
 
-        step = 0
-        tmp_list1 = beam_model.keep_topk_nodes(new_node_list)  # 选最靠谱的 5 个
+        try:
+            # rxn2.append()
+            pred_set, _ = generate_reac_set(sml, pred_edit, pred_label, verbose=False)  # 重要  生成预测的反应集
+        except BaseException as e:
+            print(e, flush=True)
+            pred_set = None
 
-        scores_list1 = [x.prob for x in tmp_list1]
+        # sml = Chem.MolToSmiles(sml)
+        print('sml', sml)
+        print(beam_idx, "离去基团的标签预测结果", pred_label)
+        pred_list = list(pred_set)  # 反应集转换为列表，并打印结果
 
-        print('ok')
-        for beam_idx, node in enumerate(tmp_list1):
-            pred_edit = node.edit
-            pred_label = node.lg_groups
+        print('pred_list', pred_list)
+        if len(pred_list) > 1:
+            rxn2.append(pred_list[0] + '.' + pred_list[1])
+        else:
+            rxn2.append(pred_list[0])
 
-            print('pred_edit', pred_edit)
+        if num_fragments == 1:
+            rxn.append(rxn2[beam_idx])
+        elif num_fragments == 2:
+            rxn.append(node[3] + '.' + rxn2[beam_idx])
 
-            if isinstance(pred_edit, list):  # 检查pre_edit是否为一个列表，如果是，执行下面语句
-                pred_edit = pred_edit[0]
-
-            print(beam_idx, "离去基团的标签预测结果", pred_label)
-
-            try:
-                pred_set, _ = generate_reac_set(p, pred_edit, pred_label, verbose=False)  # 重要  生成预测的反应集
-            except BaseException as e:
-                print(e, flush=True)
-                pred_set = None
-            pred_list = list(pred_set)  # 反应集转换为列表，并打印结果
-            print('pred_list', pred_list)
-            if len(pred_list) > 1:
-                rxn.append(pred_list[0] + '.' + pred_list[1])
-            else:
-                rxn.append(pred_list[0])
-
-    b64 = []
-    img_list = []
-
+    print('rxn', rxn)
     mol_rxn = [Chem.MolFromSmiles(sml) for sml in rxn]
-    for x in mol_rxn[1:]:
-        img = Draw.MolsToGridImage([x], molsPerRow=1, subImgSize=(800, 600),)
-        img_list.append(img)
-    for img in img_list:
-        additional_img_bytes = io.BytesIO()
-        img.save(additional_img_bytes, format='PNG')
-        additional_image_b64 = base64.b64encode(additional_img_bytes.getvalue()).decode('utf-8')
-        b64.append(additional_image_b64)
-
-    return scores_list1,b64
+    img = Draw.MolsToGridImage(mol_rxn, molsPerRow=3, subImgSize=(800, 800))
+    img.save("aab_duanjian/000结果.png")
 
 
 
-class SmileRequest(BaseModel):
-    smile: str
 
-class hCz_context(BaseModel):
-    smile: str
-    edit_1:str
-    edit_2:str
+# smile = 'CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O'
+# edit_1 = '9:10'
+# edit_2 = '14:15'
 
-class Edit_context(BaseModel):
-    smile: str
-    edit_1:str
-    edit_2:str
-    beam_num01:int
-    beam_num02:int
+smile = 'O=C1[C@@H](C2C=CC=CC=2)O[C@@H](C(C)(C)C)O1'
+edit_1 = '5:16'
+edit_2 = '6:7'
 
-class Edit_context002(BaseModel):
-    smile: str
-    edit_1:str
-    beam_num:int = Field(default=5)
+two_breaken_new001(smile,edit_1,edit_2,5,10)
 
-
-# 产物原子映射
-@app.post('/user/1/TargetImage_canonicalize/')
-async def target_smile(smile_request: SmileRequest):
-
-    print(smile_request)
-    smile = smile_request.smile
-    additional_image = canonicalize_prod(smile)
-    additional_image = Chem.MolFromSmiles(additional_image)  # 将 SMILES 字符串转换为 RDKit 分子对象
-    highlight_atoms = []
-    additional_image_png = Draw.MolsToGridImage([additional_image], molsPerRow=1, subImgSize=(1000, 500), highlightAtomLists = [highlight_atoms])  # 绘制图像
-    additional_img_bytes = io.BytesIO()
-    additional_image_png.save(additional_img_bytes, format='PNG')
-    additional_image_b64 = base64.b64encode(additional_img_bytes.getvalue()).decode('utf-8')
-    return {
-        'images': additional_image_b64,
-    }
-# 断键预测 -- 单键/单原子
-@app.post('/user/1/edits_context002/')
-async def edit_context002(edit_context: Edit_context002):
-    beam_num = edit_context.beam_num
-    width_nub, beam_model = load_models(beam_num)
-    smile = [edit_context.smile]
-    edit_1 = edit_context.edit_1
-    a1, a2 = edit_1.split(":")
-    a1, a2 = int(a1), int(a2)
-    scores_list1,result_b64 = broken_one(smile, a1, a2,width_nub=width_nub,beam_model=beam_model)
-
-    response_data =  {
-        'result_b64': result_b64,
-        'scores_list':scores_list1,
-    }
-    return JSONResponse(content=response_data)
-
-    # return {
-    #     'result_b64': result_b64,
-    #     'scores_list1': scores_list1,
-    #
-    # }
-
-# 断键预测 -- 双键
-@app.post('/user/1/edits_context/')
-async def edit_context(edit_context: Edit_context):
-    beam_num01 = edit_context.beam_num01
-    beam_num02 = edit_context.beam_num02
-    width_nub, beam_model = load_models(beam_num01)
-    smile = [edit_context.smile]
-    edit_1 = edit_context.edit_1
-    edit_2 = edit_context.edit_2
-    a1, a2 = edit_1.split(":")
-    a1, a2 = int(a1), int(a2)
-    a11, a22 = edit_2.split(":")
-    a11, a22 = int(a11), int(a22)
-    print(smile, a1, a2,a11,a22)
-    scores_list, result_b64 = broken_tow_bonds(smile, a1, a2, a11, a22,width_nub=width_nub,beam_model=beam_model,second_num = beam_num02)
-    response_data =  {
-        'result_b64': result_b64,
-        'scores_list':scores_list,
-    }
-    return JSONResponse(content=response_data)
-    # return {
-    #     'result_b64': result_b64,
-    # }
-
-
-# 合成子预览功能
-@app.post('/user/1/HeChengZi/')
-async def HeChengZi(edit_context: hCz_context):
-    smile = edit_context.smile
-    edit_1 = edit_context.edit_1
-    edit_2 = edit_context.edit_2
-    a1, a2 = edit_1.split(":")
-    a1, a2 = int(a1), int(a2)
-    a11, a22 = edit_2.split(":")
-    a11, a22 = int(a11), int(a22)
-
-    print('合成子',smile, a1, a2,a11,a22)
-    heCzi = edits_split(smile, a1,a2,a11,a22)
-    return {
-        'img_heCzi': heCzi,
-    }
-
-
-# edits_split(smiles[0],15,16)
-
-# broken_tow_bonds(smiles,15,16,28,30)
+# beam_num01 = 5
+# beam_num02 = 10
+# width_nub, beam_model = load_models(beam_num01)
+# smile = ['CCNC(=O)CCC/C=C\C[C@H]1[C@H](C[C@H]([C@@H]1/C=C/[C@H](CCC2=CC=CC=C2)O)O)O']
+# edit_1 = '9:10'
+# edit_2 = '14:15'
+#
+# # smile = ['O=C1[C@@H](C2C=CC=CC=2)O[C@@H](C(C)(C)C)O1']
+# # edit_1 = '5:16'
+# # edit_2 = '6:7'
+#
+# a1, a2 = edit_1.split(":")
+# a1, a2 = int(a1), int(a2)
+# a11, a22 = edit_2.split(":")
+# a11, a22 = int(a11), int(a22)
+# list_001 = []
+# list_002 = []
+#
+# rxn=[]
+# rxn1=[]
+# rxn2=[]
+#
+# list_001 ,num_fragments = two_breaken_new(smile,a1,a2,a11,a22,width_nub=width_nub,beam_model=beam_model,second_num = beam_num02)
+# list_002 , _ = two_breaken_new(smile,a11,a22,a1,a2,width_nub=width_nub,beam_model=beam_model,second_num = beam_num02)
+#
+# list_000 = list_001+list_002
+#
+# sorted_list_2 = sorted(list_000, key=lambda x: x[1].prob, reverse=False)[:beam_num02]
+#
+# for beam_idx, node in enumerate(sorted_list_2):  # tmp_list2 是元组
+#     pred_edit = node[1].edit
+#     pred_label = node[1].lg_groups
+#
+#     sml = node[2]
+#
+#     if isinstance(pred_edit, list):  # 检查pre_edit是否为一个列表，如果是，执行下面语句
+#         pred_edit = pred_edit[0]
+#
+#     print(beam_idx, "离去基团的标签预测结果", pred_label)
+#
+#     try:
+#         # rxn2.append()
+#         pred_set, _ = generate_reac_set(sml, pred_edit, pred_label, verbose=False)  # 重要  生成预测的反应集
+#     except BaseException as e:
+#         print(e, flush=True)
+#         pred_set = None
+#
+#     # sml = Chem.MolToSmiles(sml)
+#     print('sml', sml)
+#     print(beam_idx, "离去基团的标签预测结果", pred_label)
+#     pred_list = list(pred_set)  # 反应集转换为列表，并打印结果
+#
+#     print('pred_list', pred_list)
+#     if len(pred_list) > 1:
+#         rxn2.append(pred_list[0] + '.' + pred_list[1])
+#     else:
+#         rxn2.append(pred_list[0])
+#
+#     if num_fragments == 1:
+#         rxn.append(rxn2[beam_idx])
+#     elif num_fragments == 2:
+#         rxn.append(node[3] + '.' + rxn2[beam_idx])
+#
+# print('rxn',rxn)
+# mol_rxn = [Chem.MolFromSmiles(sml) for sml in rxn]
+# img=Draw.MolsToGridImage(mol_rxn, molsPerRow=3, subImgSize=(800, 800))
+# img.save("aab_duanjian/000结果.png")
 
 
 
 
 
-
-if __name__ == '__main__':  # 如果本文件是一个启动文件
-    uvicorn.run("broken_tow_bonds:app", port=8000,reload=False)
-
-
-
+print('ok')

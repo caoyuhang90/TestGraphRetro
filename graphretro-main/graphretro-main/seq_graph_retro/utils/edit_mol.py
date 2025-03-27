@@ -342,13 +342,17 @@ def attach_lg_to_mol(rw_mol, frag_attach_idxs, lg_group, lg_mol):
 def canonicalize(smiles):
     try:
         tmp = Chem.MolFromSmiles(smiles)
-    except:
-        print('no mol', flush=True)
-        return smiles
+    except Exception as e:
+     print(f'Error processing SMILES: {smiles}, Error: {e}', flush=True)
+     return smiles
     if tmp is None:
+        print(f'Error processing SMILES: {smiles}')
+        print(f'Error processing SMILES: {smiles}')
+        print(f'Error processing SMILES: {smiles}')
         return smiles
     tmp = Chem.RemoveHs(tmp)  # # 移除氢原子
     [a.ClearProp('molAtomMapNumber') for a in tmp.GetAtoms()]   ## # 清除原子映射编号
+    xxx = Chem.MolToSmiles(tmp)
     return Chem.MolToSmiles(tmp)
 
 def edit_mol(prod_smi, edit, lg_groups):
@@ -655,9 +659,19 @@ def generate_reac_set(prod_smi, edit, lg_groups, verbose=False):
 
     reac_smi = Chem.MolToSmiles(reac_mol)
     reac_smi_no_canonicalize = reac_smi  # 未标准化   修改了
+
     reac_smi = canonicalize(reac_smi) # 标准化
 
-    reac_mols = [Chem.MolFromSmiles(smi) for smi in reac_smi.split(".")]
+
+
+    print('reac_smi:', reac_smi)
+
+    reac_mols = [Chem.MolFromSmiles(smi) for smi in reac_smi.split(".")]   # 问题所在位置
+    # reac_mols = []
+    # for smi in reac_smi.split("."):
+    #     print('smi:', smi)
+    #     reac_mols.append([Chem.MolFromSmiles(smi)])  #  修改
+
     for index, mol in enumerate(reac_mols):
         if mol is None:
             continue

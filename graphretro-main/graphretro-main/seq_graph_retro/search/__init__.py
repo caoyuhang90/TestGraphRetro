@@ -121,7 +121,7 @@ class BeamSearch:
         return sorted_node_list
 
     def keep_topk_nodes_new(self, node_list,second_num=5):
-        indexed_node_list = [(index, copy_node(node)) for index, node in enumerate(node_list)]
+        indexed_node_list = [[index, copy_node(node)] for index, node in enumerate(node_list)]  # 改成数组了
         sorted_node_list = sorted(indexed_node_list, key=lambda x: x[1].prob, reverse=True)
         if len(sorted_node_list) <= second_num:
             return sorted_node_list

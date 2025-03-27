@@ -170,6 +170,8 @@ def broken_one(sml,a1,a2,width_nub, beam_model,b1=2.0,b2= 0):
     rxn = []
     rxn1 = []
     rxn2 = []
+    fragments_new2_list = []
+    reac_smi_no_canonicalize_list = []
     for id,smile in enumerate(sml):
         p = canonicalize_prod(smile)  # 清理 + 重新编码
         rxn.append(p)  # 将产物加入到列表中
@@ -184,6 +186,10 @@ def broken_one(sml,a1,a2,width_nub, beam_model,b1=2.0,b2= 0):
         step = 0
         new_node, fragments_new2 = beam_model._create_lg_node(p, node_list[0],
                                                               rxn_class=None)  # 增加了两个特征向量（一个关于合成子frag_vecs，一个关于产物prod_vecs），合成子个数
+
+        fragments_new2 = Chem.MolToSmiles(fragments_new2)
+        fragments_new2_list.append(fragments_new2)   # 合成子显示
+
         new_node_list.append(new_node)
 
         while not check_nodes_complete(new_node_list) and step <= 6:
@@ -194,7 +200,13 @@ def broken_one(sml,a1,a2,width_nub, beam_model,b1=2.0,b2= 0):
             new_node_list = tmp_list
             step += 1
 
+
+
         tmp_list1 = beam_model.keep_topk_nodes(new_node_list)  # 选最靠谱的 5 个
+
+
+
+
         for beam_idx, node in enumerate(tmp_list1):
             pred_edit = node.edit
             pred_label = node.lg_groups
@@ -207,7 +219,8 @@ def broken_one(sml,a1,a2,width_nub, beam_model,b1=2.0,b2= 0):
             print(beam_idx, "离去基团的标签预测结果", pred_label)
 
             try:
-                pred_set,_ = generate_reac_set(p, pred_edit, pred_label, verbose=False)  # 重要  生成预测的反应集
+                pred_set, reac_smi_no_canonicalize = generate_reac_set(p, pred_edit, pred_label, verbose=False)  # 重要  生成预测的反应集
+                reac_smi_no_canonicalize_list.append(reac_smi_no_canonicalize)
             except BaseException as e:
                 print(e, flush=True)
                 pred_set = None
@@ -215,13 +228,44 @@ def broken_one(sml,a1,a2,width_nub, beam_model,b1=2.0,b2= 0):
             print('pred_list', pred_list)
             if len(pred_list) > 1:
                 rxn.append(pred_list[0] + '.' + pred_list[1])
-            else:
+
+            else:  # 问题执行如下
                 rxn.append(pred_list[0])
+
+
+
+    print('rxn:',rxn)
+    print('reac_smi_no_canonicalize_list:', reac_smi_no_canonicalize_list)
+
 
 
     mol_rxn = [Chem.MolFromSmiles(sml) for sml in rxn]
     img = Draw.MolsToGridImage(mol_rxn, molsPerRow=3, subImgSize=(800, 800))
     img.save("aab_duanjian/0结果.png")
+
+
+    print('okk')
+
+
+    # highlight_atoms_list = []
+    # molecules = [Chem.MolFromSmiles(fragment) for fragment in reac_smi_no_canonicalize_list]
+    # for mol in molecules:
+    #     highlight_atoms = []
+    #     for atom in mol.GetAtoms():
+    #         if atom.GetAtomMapNum() > 999:  # 目标映射编号
+    #             print(atom.GetAtomMapNum(),atom.GetIdx())
+    #             highlight_atoms.append(atom.GetIdx())
+    #     highlight_atoms_list.append(highlight_atoms)
+    #
+    # print('highlight_atoms_list', len(highlight_atoms_list))
+    #
+    # for i, highlight_atoms in enumerate(highlight_atoms_list):
+    #     print(f"Molecule {i}: Highlight Atoms: {highlight_atoms}")
+
+    # mol_rxn = [Chem.MolFromSmiles(sml) for sml in reac_smi_no_canonicalize_list]
+    # print('mol_rxn', len(mol_rxn))
+    # img = Draw.MolsToGridImage(mol_rxn, molsPerRow=3, subImgSize=(800, 800))
+    # img.save("aab_duanjian/01结果.png")
 
     # b64 = []
     # img_list = []
@@ -238,6 +282,9 @@ def broken_one(sml,a1,a2,width_nub, beam_model,b1=2.0,b2= 0):
     # return b64
 
 
-# width_nub, beam_model = load_models(10)
-smiles = ['O=C(/C=C/C1C=C(C)C(=C(C)C=1)O)C1C=CC(=CC=1)SC']
-# broken_one(smiles,9,10,beam_model=beam_model,width_nub=width_nub)
+width_nub, beam_model = load_models(10)
+# smiles = ['BrC1=CC=C(C=C1)C1C(Cl)=NC=NC=1OCCOC1N=CC(=CN=1)Br']
+# broken_one(smiles,6,7,beam_model=beam_model,width_nub=width_nub)
+
+smiles = ['O=C1[C@@H](C2C=CC=CC=2)O[C@@H](C(C)(C)C)O1']
+broken_one(smiles,9,16,beam_model=beam_model,width_nub=width_nub)
